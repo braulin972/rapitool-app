@@ -7,13 +7,15 @@ export default function TarjetaEquipo({ equipo = {} }) {
   const nombreFinal = equipo.nombre_equipo || equipo.nombre || 'Equipo en renta';
   const precioFinal = Number(equipo.precio_dia || equipo.precio || 0);
   const esPesada = equipo.categoria_automatica === 'maquinaria_pesada' || equipo.categoria === 'pesada';
-  
-  // Soporte para join relacional o propiedad plana
+
   const estaVerificado = Boolean(
-    equipo.perfiles_proveedores?.verificado || 
-    equipo.proveedor_verificado || 
+    equipo.perfiles_proveedores?.verificado ||
+    equipo.proveedor_verificado ||
     equipo.verificado
   );
+
+  // Solo muestra zona municipal general, nunca direcciones exactas de patio
+  const zonaGeneral = equipo.perfiles_proveedores?.municipio_base || equipo.ubicacion || 'Zona Centro • Chiapas';
 
   const colors = {
     cardBg: '#2A374A',
@@ -31,10 +33,10 @@ export default function TarjetaEquipo({ equipo = {} }) {
   };
 
   return (
-    <article style={{ 
-      backgroundColor: colors.cardBg, 
-      border: `1px solid ${colors.border}`, 
-      borderRadius: '8px', 
+    <article style={{
+      backgroundColor: colors.cardBg,
+      border: `1px solid ${colors.border}`,
+      borderRadius: '8px',
       overflow: 'hidden',
       fontFamily: 'Arial, sans-serif',
       boxShadow: '0 6px 16px rgba(0,0,0,0.3)',
@@ -43,10 +45,9 @@ export default function TarjetaEquipo({ equipo = {} }) {
       justifyContent: 'space-between',
       position: 'relative'
     }}>
-      {/* Contenedor de Imagen con Insignia Superpuesta */}
       <div style={{ width: '100%', height: '170px', backgroundColor: colors.cardInner, overflow: 'hidden', position: 'relative' }}>
-        <img 
-          src={equipo.foto_url || NO_IMAGE_PLACEHOLDER} 
+        <img
+          src={equipo.foto_url || NO_IMAGE_PLACEHOLDER}
           alt={nombreFinal}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onError={(e) => {
@@ -54,18 +55,16 @@ export default function TarjetaEquipo({ equipo = {} }) {
             e.currentTarget.src = NO_IMAGE_PLACEHOLDER;
           }}
         />
-
-        {/* Doble señalización en la imagen (Ícono + Categoría) */}
-        <span style={{ 
+        <span style={{
           position: 'absolute',
           top: '10px',
           left: '10px',
-          fontSize: '11px', 
-          color: colors.textMain, 
-          fontWeight: 'bold', 
-          backgroundColor: 'rgba(26, 35, 50, 0.9)', 
+          fontSize: '11px',
+          color: colors.textMain,
+          fontWeight: 'bold',
+          backgroundColor: 'rgba(26, 35, 50, 0.9)',
           border: `1px solid ${colors.border}`,
-          padding: '4px 8px', 
+          padding: '4px 8px',
           borderRadius: '4px',
           textTransform: 'uppercase',
           backdropFilter: 'blur(4px)'
@@ -74,56 +73,54 @@ export default function TarjetaEquipo({ equipo = {} }) {
         </span>
       </div>
 
-      {/* Cuerpo de la Tarjeta */}
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
         <div>
-          {/* SELLO OFICIAL VS ADVERTENCIA DE DESLINDE */}
           <div style={{ marginBottom: '10px' }}>
             {estaVerificado ? (
-              <div 
+              <div
                 title="Proveedor auditado físicamente en patio y con documentación fiscal/seguro cotejada."
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '6px',
-                  backgroundColor: colors.goldBg, 
-                  border: `1px solid ${colors.goldBorder}`, 
-                  color: colors.goldText, 
-                  padding: '4px 8px', 
-                  borderRadius: '4px', 
-                  fontSize: '11px', 
-                  fontWeight: 'bold' 
+                  backgroundColor: colors.goldBg,
+                  border: `1px solid ${colors.goldBorder}`,
+                  color: colors.goldText,
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 'bold'
                 }}
               >
                 <span>🛡️</span>
                 <span>Avalado por Industrias Wert</span>
               </div>
             ) : (
-              <div 
-                title="Industrias Wert actúa únicamente como tablón técnico neutral. Operación bajo propio riesgo."
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+              <div
+                title="Industrias Wert actúa como intermediario de custodia. Ubicación exacta protegida."
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '6px',
-                  backgroundColor: colors.warnBg, 
-                  border: `1px solid ${colors.warnBorder}`, 
-                  color: colors.warnText, 
-                  padding: '4px 8px', 
-                  borderRadius: '4px', 
-                  fontSize: '11px', 
-                  fontWeight: 'bold' 
+                  backgroundColor: colors.warnBg,
+                  border: `1px solid ${colors.warnBorder}`,
+                  color: colors.warnText,
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 'bold'
                 }}
               >
-                <span>⚠️</span>
-                <span>Proveedor Independiente (No Auditado)</span>
+                <span>🔒</span>
+                <span>Proveedor Protegido (Custodia Wert)</span>
               </div>
             )}
           </div>
 
-          <h3 style={{ 
-            margin: '0 0 6px 0', 
-            color: colors.textMain, 
-            fontSize: '16px', 
+          <h3 style={{
+            margin: '0 0 6px 0',
+            color: colors.textMain,
+            fontSize: '16px',
             fontWeight: 'bold',
             lineHeight: '1.3',
             display: '-webkit-box',
@@ -136,18 +133,17 @@ export default function TarjetaEquipo({ equipo = {} }) {
           </h3>
 
           <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: colors.textSecondary }}>
-            📍 {equipo.ubicacion || 'Centro • Chiapas'}
+            📍 {zonaGeneral}
           </p>
         </div>
 
-        {/* Barra de Precio y Acción con área táctil >= 48px */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginTop: '12px', 
-          paddingTop: '12px', 
-          borderTop: `1px solid ${colors.border}` 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '12px',
+          paddingTop: '12px',
+          borderTop: `1px solid ${colors.border}`
         }}>
           <div>
             <p style={{ margin: 0, fontSize: '11px', color: colors.textSecondary }}>Tarifa Diaria</p>
@@ -156,17 +152,17 @@ export default function TarjetaEquipo({ equipo = {} }) {
               <span style={{ fontSize: '11px', color: colors.textSecondary }}>MXN</span>
             </p>
           </div>
-          
-          <Link 
-            to={`/producto/${idFinal}`} 
-            style={{ 
+
+          <Link
+            to={`/producto/${idFinal}`}
+            style={{
               textDecoration: 'none',
               minHeight: '48px',
-              padding: '0 16px', 
-              backgroundColor: colors.accent, 
-              color: '#1A2332', 
-              borderRadius: '6px', 
-              fontWeight: 'bold', 
+              padding: '0 16px',
+              backgroundColor: colors.accent,
+              color: '#1A2332',
+              borderRadius: '6px',
+              fontWeight: 'bold',
               fontSize: '14px',
               display: 'inline-flex',
               alignItems: 'center',

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22500%22%20height%3D%22350%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23202B3C%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%23F4EFE6%22%20dy%3D%22.3em%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%20font-size%3D%2218%22%3ESin%20Imagen%3C%2Ftext%3E%3C%2Fsvg%3E";
+const WHATSAPP_CENTRAL_WERT = '529613233913';
 
 export default function DetalleProducto() {
   const { id } = useParams();
@@ -11,27 +12,25 @@ export default function DetalleProducto() {
   const [equipo, setEquipo] = useState(null);
   const [propietarioId, setPropietarioId] = useState(null);
   const [proveedor, setProveedor] = useState({
-    nombre_empresa: '',
-    telefono: '',
+    nombre_empresa: 'Arrendador Protegido Wert',
     verificado: false,
-    municipio_base: ''
+    municipio_base: 'Tuxtla Gutiérrez, Chiapas'
   });
   const [loading, setLoading] = useState(true);
   const [errorCarga, setErrorCarga] = useState(null);
 
-  // Modalidad y parámetros de cotización
-  const [modalidad, setModalidad] = useState('dia'); 
-  const [horasRenta, setHorasRenta] = useState(1); 
+  const [modalidad, setModalidad] = useState('dia');
+  const [horasRenta, setHorasRenta] = useState(1);
   const [mesesRenta, setMesesRenta] = useState(1);
-  const [fechaInicio, setFechaInicio] = useState(''); 
-  const [fechaFin, setFechaFin] = useState(''); 
-  const [horaInicioServicio, setHoraInicioServicio] = useState('08:00');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [horaInicioServicio] = useState('08:00');
   const [mostrarVideo, setMostrarVideo] = useState(false);
-  
+
   const [nuevaPregunta, setNuevaPregunta] = useState('');
   const [preguntas, setPreguntas] = useState([
     { texto: '¿El precio incluye combustible o va por mi cuenta?', respuesta: 'El equipo se entrega con tanque lleno y se devuelve en el mismo estado. El combustible corre por cuenta de la obra contratante.' },
-    { texto: '¿Qué tiempo de respuesta tienen ante soporte técnico o falla?', respuesta: 'Para proveedores verificados en Chiapas, el tiempo de respuesta promedio de asistencia mecánica en obra es menor a 3 horas.' }
+    { texto: '¿Cómo se coordina la entrega y el contacto con el dueño?', respuesta: 'Por seguridad anti-extorsión, los datos directos y ubicación de patio se liberan únicamente tras validar identidad (KYC) y confirmar la reserva.' }
   ]);
 
   const colors = {
@@ -72,23 +71,22 @@ export default function DetalleProducto() {
         if (!montado) return;
         setEquipo(productoData);
 
-        // Identificar ID oficial del arrendador
         const idDueno = productoData.id_arrendador;
         setPropietarioId(idDueno || null);
 
         if (idDueno) {
+          // Consulta exclusivamente la vista pública blindada (cero teléfono, cero RFC, cero dirección exacta)
           const { data: perfilData, error: perfilError } = await supabase
-            .from('perfiles_proveedores')
-            .select('nombre_empresa, telefono, verificado, municipio_base')
+            .from('vista_proveedores_publica')
+            .select('nombre_empresa, verificado, municipio_base')
             .eq('usuario_id', idDueno)
             .maybeSingle();
 
           if (!perfilError && perfilData && montado) {
             setProveedor({
-              nombre_empresa: perfilData.nombre_empresa || 'Arrendador Particular',
-              telefono: perfilData.telefono ? perfilData.telefono.replace(/\D/g, '') : '',
+              nombre_empresa: perfilData.nombre_empresa || 'Arrendador Afiliado',
               verificado: Boolean(perfilData.verificado),
-              municipio_base: perfilData.municipio_base || ''
+              municipio_base: perfilData.municipio_base || 'Tuxtla Gutiérrez, Chiapas'
             });
           }
         }
@@ -112,7 +110,7 @@ export default function DetalleProducto() {
   if (loading) {
     return (
       <div style={{ padding: '80px 20px', textAlign: 'center', color: colors.textMain, backgroundColor: colors.bg, minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
-        <p style={{ fontSize: '18px' }}>⏳ Verificando ficha técnica y estado de auditoría...</p>
+        <p style={{ fontSize: '18px' }}>⏳ Verificando ficha técnica y protocolo de custodia...</p>
       </div>
     );
   }
@@ -122,8 +120,8 @@ export default function DetalleProducto() {
       <div style={{ padding: '80px 20px', textAlign: 'center', color: colors.textMain, backgroundColor: colors.bg, minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
         <h2 style={{ color: colors.accent, fontSize: '24px' }}>Equipo No Localizado</h2>
         <p style={{ color: colors.textSecondary, margin: '15px 0 25px 0' }}>{errorCarga}</p>
-        <button 
-          onClick={() => navigate('/')} 
+        <button
+          onClick={() => navigate('/')}
           style={{ minHeight: '48px', backgroundColor: colors.accent, color: '#1A2332', padding: '0 24px', border: 'none', borderRadius: '6px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer' }}
         >
           Volver al Catálogo Principal
@@ -132,11 +130,9 @@ export default function DetalleProducto() {
     );
   }
 
-  // Tarifas conforme a las columnas reales de 'productos'
   const precioHora = Number(equipo.precio_hora || 0);
   const precioDia = Number(equipo.precio_dia || 0);
   const precioMes = Number(equipo.precio_mes || 0);
-
   const preciosDisponibles = { hora: precioHora, dia: precioDia, mes: precioMes };
 
   let unidadesCalculadas = 1;
@@ -154,46 +150,46 @@ export default function DetalleProducto() {
   const precioUnitario = preciosDisponibles[modalidad] || precioDia;
   const costoRentaTotal = precioUnitario * unidadesCalculadas;
 
-  const periodoTexto = modalidad === 'hora' 
-    ? `${horasRenta} hr(s) el ${fechaInicio || 'Fecha pendiente'} a las ${horaInicioServicio}` 
+  const periodoTexto = modalidad === 'hora'
+    ? `${horasRenta} hr(s) el ${fechaInicio || 'Fecha pendiente'} a las ${horaInicioServicio}`
     : modalidad === 'mes'
     ? `${mesesRenta} mes(es) desde el ${fechaInicio || 'Fecha pendiente'}`
     : `${unidadesCalculadas} día(s) [${fechaInicio || 'Inicio'} al ${fechaFin || 'Fin'}]`;
+
+  const zonaOperativaPublica = proveedor.municipio_base || 'Tuxtla Gutiérrez, Chiapas';
 
   const iniciarRentaSegura = () => {
     navigate('/checkout/flete', {
       state: {
         productoId: equipo.id,
-        proveedorId: propietarioId, // Se transfiere explícitamente el id_arrendador
+        proveedorId: propietarioId,
         nombreEquipo: equipo.nombre,
         empresa: proveedor.nombre_empresa || 'Proveedor Industrias Wert',
         costoRenta: costoRentaTotal,
         detallesTiempo: periodoTexto,
-        municipio: equipo.ubicacion_almacen || 'Tuxtla Gutiérrez'
+        municipio: zonaOperativaPublica
       }
     });
   };
 
+  // Enruta exclusivamente a la Central de Custodia Wert para filtrar prospectos antes de contactar al dueño
   const generarMensajeWhatsApp = () => {
-    const telefonoFinal = proveedor.telefono ? (proveedor.telefono.length === 10 ? `52${proveedor.telefono}` : proveedor.telefono) : '529613233913';
+    const texto = `Hola Central Industrias Wert, solicito validación de disponibilidad para el siguiente equipo:\n\n` +
+      `🆔 *Folio Activo:* #${equipo.id}\n` +
+      `🚜 *Equipo:* ${equipo.nombre}\n` +
+      `📍 *Zona Base:* ${zonaOperativaPublica}\n` +
+      `⏱️ *Periodo Estimado:* ${periodoTexto}\n` +
+      `💰 *Subtotal Cotizado:* $${costoRentaTotal.toLocaleString('es-MX')} MXN\n\n` +
+      `Deseo iniciar el filtro de validación para confirmar disponibilidad.`;
 
-    const texto = `Hola, me comunico a través de INDUSTRIAS WERT por el siguiente activo:\n\n` +
-      `🚜 *Activo:* ${equipo.nombre}\n` +
-      `🏢 *Arrendador:* ${proveedor.nombre_empresa || 'Particular'}\n` +
-      `🛡️ *Estatus:* ${proveedor.verificado ? 'Verificado Oficial Wert' : 'Proveedor Independiente'}\n` +
-      `📍 *Patio:* ${equipo.ubicacion_almacen || 'Tuxtla Gutiérrez, Chiapas'}\n` +
-      `⏱️ *Tiempo Estimado:* ${periodoTexto}\n` +
-      `💰 *Subtotal Estimado:* $${costoRentaTotal.toLocaleString('es-MX')} MXN\n\n` +
-      `¿Tienen el equipo disponible para inspección en patio o salida a obra?`;
-
-    return `https://wa.me/${telefonoFinal}?text=${encodeURIComponent(texto)}`;
+    return `https://wa.me/${WHATSAPP_CENTRAL_WERT}?text=${encodeURIComponent(texto)}`;
   };
 
   const manejarPregunta = (e) => {
     e.preventDefault();
     if (!nuevaPregunta.trim()) return;
     setPreguntas(prev => [
-      { texto: nuevaPregunta.trim(), respuesta: 'Tu consulta ha sido enviada al arrendador. Se registrará la respuesta técnica en breve.' },
+      { texto: nuevaPregunta.trim(), respuesta: 'Consulta recibida por Central Wert. Validaremos el dato técnico directamente con el propietario manteniendo su privacidad.' },
       ...prev
     ]);
     setNuevaPregunta('');
@@ -202,7 +198,7 @@ export default function DetalleProducto() {
   return (
     <div style={{ backgroundColor: colors.bg, minHeight: '100vh', color: colors.textMain, fontFamily: 'Arial, sans-serif', padding: '30px 16px', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        
+
         {/* BREADCRUMB */}
         <div style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Link to="/" style={{ color: colors.accent, textDecoration: 'none', fontWeight: 'bold' }}>Inicio</Link>
@@ -219,33 +215,33 @@ export default function DetalleProducto() {
               <span style={{ fontSize: '28px' }}>🛡️</span>
               <div>
                 <h3 style={{ margin: 0, color: colors.goldText, fontSize: '16px', fontWeight: 'bold' }}>
-                  Proveedor Verificado y Avalado por Industrias Wert
+                  Proveedor Verificado y Resguardado por Industrias Wert
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: colors.textMain, lineHeight: '1.4' }}>
-                  Activo respaldado por <strong>{proveedor.nombre_empresa}</strong>. Constancia fiscal (RFC), propiedad del activo y condiciones mecánicas en patio auditadas formalmente.
+                  Activo respaldado por <strong>{proveedor.nombre_empresa}</strong>. Titularidad y condiciones auditadas bajo protocolo de confidencialidad y custodia SPEI.
                 </p>
               </div>
             </div>
           ) : (
             <div style={{ backgroundColor: colors.warnBg, border: `2px solid ${colors.warnBorder}`, borderRadius: '8px', padding: '16px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '24px' }}>⚠️</span>
+                <span style={{ fontSize: '24px' }}>🔒</span>
                 <h3 style={{ margin: 0, color: colors.warnText, fontSize: '15px', fontWeight: 'bold' }}>
-                  Aviso Preventivo: Proveedor Independiente (No Auditado en Patio)
+                  Operación con Privacidad Protegida y Custodia Intermedia
                 </h3>
               </div>
               <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: colors.textSecondary, lineHeight: '1.4' }}>
-                Este activo es publicado por un tercero ajeno a la auditoría técnica de Industrias Wert. La disponibilidad mecánica, horómetro real y titularidad legal son manifestación exclusiva del arrendador.
+                Para seguridad del propietario, el teléfono directo y la ubicación exacta del patio permanecen cifrados hasta que el solicitante acredite identidad (KYC) y formalice la orden de renta.
               </p>
               <div style={{ backgroundColor: colors.cardInner, padding: '10px 14px', borderRadius: '6px', border: `1px solid ${colors.inputBorder}`, fontSize: '12px', color: colors.textSecondary, lineHeight: '1.4' }}>
-                ⚖️ <strong>Cláusula de Deslinde Legal:</strong> Industrias Wert funge estrictamente como plataforma tecnológica de contacto. No asume responsabilidad civil, mercantil ni penal, solidaria o subsidiaria, por vicios ocultos de maquinaria, averías mecánicas, siniestros viales o incumplimientos económicos entre particulares.
+                ⚖️ <strong>Cláusula de Deslinde Legal:</strong> Industrias Wert funge estrictamente como plataforma tecnológica de intermediación y custodia. No asume responsabilidad civil, mercantil ni penal, solidaria o subsidiaria, por vicios ocultos de maquinaria o siniestros en obra.
               </div>
             </div>
           )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px', alignItems: 'start' }}>
-          
+
           {/* MULTIMEDIA */}
           <div>
             <div style={{ width: '100%', height: '350px', backgroundColor: colors.card, borderRadius: '8px', border: `1px solid ${colors.inputBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
@@ -257,8 +253,9 @@ export default function DetalleProducto() {
                     <span style={{ fontSize: '48px' }}>🎥</span>
                     <p style={{ margin: '12px 0 0 0', color: colors.accent, fontWeight: 'bold', fontSize: '16px' }}>Sin video operativo disponible</p>
                     <p style={{ color: colors.textSecondary, fontSize: '13px', margin: '6px 0 16px 0' }}>El arrendador aún no ha cargado la demostración funcional en video.</p>
-                    <button 
-                      onClick={() => setMostrarVideo(false)} 
+                    <button
+                      type="button"
+                      onClick={() => setMostrarVideo(false)}
                       style={{ minHeight: '44px', padding: '0 16px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}
                     >
                       ← Volver a Fotografía
@@ -266,50 +263,32 @@ export default function DetalleProducto() {
                   </div>
                 )
               ) : (
-                <img 
-                  src={equipo.foto_url || NO_IMAGE_PLACEHOLDER} 
-                  alt={equipo.nombre} 
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  onError={(e) => { 
-                    e.currentTarget.onerror = null; 
-                    e.currentTarget.src = NO_IMAGE_PLACEHOLDER; 
+                <img
+                  src={equipo.foto_url || NO_IMAGE_PLACEHOLDER}
+                  alt={equipo.nombre}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = NO_IMAGE_PLACEHOLDER;
                   }}
                 />
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '14px' }}>
-              <button 
-                onClick={() => setMostrarVideo(false)} 
-                style={{ 
-                  flex: 1, 
-                  minHeight: '48px', 
-                  backgroundColor: !mostrarVideo ? colors.cardLight : colors.card, 
-                  borderRadius: '6px', 
-                  border: !mostrarVideo ? `2px solid ${colors.accent}` : `1px solid ${colors.inputBorder}`, 
-                  color: colors.textMain, 
-                  cursor: 'pointer', 
-                  fontWeight: 'bold', 
-                  fontSize: '14px' 
-                }}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setMostrarVideo(false)}
+                style={{ flex: 1, minHeight: '44px', backgroundColor: !mostrarVideo ? colors.accent : colors.card, color: !mostrarVideo ? '#1A2332' : colors.textMain, border: `1px solid ${colors.inputBorder}`, borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
               >
                 📸 Fotografía
               </button>
-              <button 
-                onClick={() => setMostrarVideo(true)} 
-                style={{ 
-                  flex: 1, 
-                  minHeight: '48px', 
-                  backgroundColor: mostrarVideo ? colors.cardLight : colors.card, 
-                  borderRadius: '6px', 
-                  border: mostrarVideo ? `2px solid ${colors.accent}` : `1px solid ${colors.inputBorder}`, 
-                  color: colors.accent, 
-                  fontWeight: 'bold', 
-                  cursor: 'pointer', 
-                  fontSize: '14px' 
-                }}
+              <button
+                type="button"
+                onClick={() => setMostrarVideo(true)}
+                style={{ flex: 1, minHeight: '44px', backgroundColor: mostrarVideo ? colors.accent : colors.card, color: mostrarVideo ? '#1A2332' : colors.textMain, border: `1px solid ${colors.inputBorder}`, borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                ▶️ Video de Patio
+                🎥 Video en Patio
               </button>
             </div>
           </div>
@@ -322,10 +301,11 @@ export default function DetalleProducto() {
 
             <div style={{ backgroundColor: colors.card, padding: '16px', borderRadius: '8px', border: `1px solid ${colors.inputBorder}`, marginBottom: '18px' }}>
               <h3 style={{ margin: '0 0 6px 0', color: colors.accent, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                📍 Ubicación Operativa y Horómetro
+                📍 Zona de Cobertura y Horómetro
               </h3>
               <p style={{ margin: 0, fontSize: '14px', color: colors.textSecondary, lineHeight: '1.5' }}>
-                Patio de resguardo: <strong style={{ color: colors.textMain }}>{equipo.ubicacion_almacen || 'Tuxtla Gutiérrez, Chiapas'}</strong>.<br />
+                Zona operativa: <strong style={{ color: colors.textMain }}>{zonaOperativaPublica}</strong>.<br />
+                Patio exacto: <strong style={{ color: colors.goldText }}>🔒 Ubicación exacta protegida hasta confirmar renta</strong>.<br />
                 Horómetro reportado: <strong style={{ color: colors.textMain }}>{equipo.horometro ? `${Number(equipo.horometro).toLocaleString('es-MX')} hrs` : 'No especificado'}</strong>.
               </p>
             </div>
@@ -348,19 +328,18 @@ export default function DetalleProducto() {
                 <tr style={{ borderBottom: `1px solid ${colors.cardLight}` }}>
                   <td style={{ padding: '10px 0', color: colors.textSecondary }}>Arrendador:</td>
                   <td style={{ padding: '10px 0', fontWeight: 'bold', color: colors.textMain }}>
-                    {proveedor.nombre_empresa} {proveedor.municipio_base ? `(${proveedor.municipio_base})` : ''}
+                    {proveedor.nombre_empresa} ({zonaOperativaPublica})
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            {/* CAJA DE DESCRIPCIÓN Y ESPECIFICACIONES ADICIONALES */}
             <div style={{ marginTop: '18px', backgroundColor: colors.cardInner, padding: '14px', borderRadius: '6px', border: `1px solid ${colors.inputBorder}` }}>
               <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', color: colors.accent, textTransform: 'uppercase' }}>
-                📋 Condiciones Operativas y Notas de Entrega
+                📋 Condiciones Operativas y Protocolo de Entrega
               </h4>
               <p style={{ margin: 0, fontSize: '13px', color: colors.textSecondary, lineHeight: '1.4' }}>
-                Equipo verificado con mantenimiento preventivo al día. Incluye operador capacitado previa solicitud en cotización de flete y herramientas de desgaste básicas en buen estado operativo.
+                Ningún equipo abandona patio sin validación documental previa del solicitante (INE, comprobante de domicilio y ubicación de obra) y confirmación de pago en custodia.
               </p>
             </div>
           </div>
@@ -370,27 +349,27 @@ export default function DetalleProducto() {
             <label style={{ fontSize: '13px', color: colors.textSecondary, display: 'block', marginBottom: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
               Modalidad de Cotización:
             </label>
-            
+
             <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
               {[
                 { key: 'hora', label: '⏱️ Por Hora' },
                 { key: 'dia', label: '📅 Por Día' },
                 { key: 'mes', label: '🗓️ Por Mes' }
               ].map(m => (
-                <button 
-                  key={m.key} 
+                <button
+                  key={m.key}
                   type="button"
-                  onClick={() => { setModalidad(m.key); setFechaInicio(''); setFechaFin(''); }} 
-                  style={{ 
-                    flex: 1, 
-                    minHeight: '48px', 
-                    fontSize: '13px', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    backgroundColor: modalidad === m.key ? colors.accent : colors.inputBg, 
-                    color: modalidad === m.key ? '#1A2332' : colors.textMain, 
-                    fontWeight: 'bold', 
-                    cursor: 'pointer' 
+                  onClick={() => { setModalidad(m.key); setFechaInicio(''); setFechaFin(''); }}
+                  style={{
+                    flex: 1,
+                    minHeight: '48px',
+                    fontSize: '13px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: modalidad === m.key ? colors.accent : colors.inputBg,
+                    color: modalidad === m.key ? '#1A2332' : colors.textMain,
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
                   }}
                 >
                   {m.label}
@@ -407,21 +386,21 @@ export default function DetalleProducto() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '13px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>Horas de Renta Estimadas:</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    value={horasRenta} 
-                    onChange={e => setHorasRenta(Math.max(1, parseInt(e.target.value) || 1))} 
-                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }} 
+                  <input
+                    type="number"
+                    min="1"
+                    value={horasRenta}
+                    onChange={e => setHorasRenta(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>Fecha Requerida:</label>
-                  <input 
-                    type="date" 
-                    value={fechaInicio} 
-                    onChange={e => setFechaInicio(e.target.value)} 
-                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }} 
+                  <input
+                    type="date"
+                    value={fechaInicio}
+                    onChange={e => setFechaInicio(e.target.value)}
+                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -431,21 +410,21 @@ export default function DetalleProducto() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '13px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>Fecha de Entrada a Obra:</label>
-                  <input 
-                    type="date" 
-                    value={fechaInicio} 
-                    onChange={e => setFechaInicio(e.target.value)} 
-                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }} 
+                  <input
+                    type="date"
+                    value={fechaInicio}
+                    onChange={e => setFechaInicio(e.target.value)}
+                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>Fecha de Término:</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     min={fechaInicio || undefined}
-                    value={fechaFin} 
-                    onChange={e => setFechaFin(e.target.value)} 
-                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }} 
+                    value={fechaFin}
+                    onChange={e => setFechaFin(e.target.value)}
+                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -455,21 +434,21 @@ export default function DetalleProducto() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '13px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>Meses de Renta:</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    value={mesesRenta} 
-                    onChange={e => setMesesRenta(Math.max(1, parseInt(e.target.value) || 1))} 
-                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }} 
+                  <input
+                    type="number"
+                    min="1"
+                    value={mesesRenta}
+                    onChange={e => setMesesRenta(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', color: colors.textSecondary, display: 'block', marginBottom: '4px' }}>Fecha Estimada de Llegada:</label>
-                  <input 
-                    type="date" 
-                    value={fechaInicio} 
-                    onChange={e => setFechaInicio(e.target.value)} 
-                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }} 
+                  <input
+                    type="date"
+                    value={fechaInicio}
+                    onChange={e => setFechaInicio(e.target.value)}
+                    style={{ width: '100%', minHeight: '44px', padding: '8px 12px', borderRadius: '4px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -482,57 +461,55 @@ export default function DetalleProducto() {
                   ${costoRentaTotal.toLocaleString('es-MX')} MXN
                 </span>
               </div>
-              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: colors.textSecondary }}>* Logística de traslado se selecciona en el siguiente paso.</p>
+              <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: colors.textSecondary }}>* Requiere validación de identidad (KYC) en el siguiente paso.</p>
             </div>
 
-            {/* BOTÓN PRIMARIO: RENTAR CON CUSTODIA WERT */}
-            <button 
+            <button
               type="button"
-              onClick={iniciarRentaSegura} 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              onClick={iniciarRentaSegura}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
-                width: '100%', 
-                minHeight: '48px', 
-                backgroundColor: colors.accent, 
-                color: '#1A2332', 
-                border: 'none', 
-                borderRadius: '6px', 
-                fontWeight: 'bold', 
-                fontSize: '15px', 
-                cursor: 'pointer', 
+                width: '100%',
+                minHeight: '48px',
+                backgroundColor: colors.accent,
+                color: '#1A2332',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                fontSize: '15px',
+                cursor: 'pointer',
                 marginBottom: '10px',
-                boxSizing: 'border-box' 
+                boxSizing: 'border-box'
               }}
             >
               🔒 Rentar con Custodia WERT (Garantía SPEI) →
             </button>
 
-            {/* BOTÓN SECUNDARIO: WHATSAPP DIRECTO */}
-            <a 
-              href={generarMensajeWhatsApp()} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+            <a
+              href={generarMensajeWhatsApp()}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
-                width: '100%', 
-                minHeight: '44px', 
-                backgroundColor: 'transparent', 
-                color: colors.textSecondary, 
+                width: '100%',
+                minHeight: '44px',
+                backgroundColor: 'transparent',
+                color: colors.textSecondary,
                 border: `1px solid ${colors.inputBorder}`,
-                textDecoration: 'none', 
-                borderRadius: '6px', 
-                fontWeight: 'normal', 
-                fontSize: '13px', 
-                boxSizing: 'border-box' 
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontWeight: 'normal',
+                fontSize: '13px',
+                boxSizing: 'border-box'
               }}
             >
-              💬 Dudas previas con el arrendador (WhatsApp)
+              🛡️ Verificar Disponibilidad vía Central Wert (WhatsApp)
             </a>
           </div>
         </div>
@@ -544,17 +521,17 @@ export default function DetalleProducto() {
           <h2 style={{ color: colors.textMain, margin: '0 0 16px 0', fontSize: '18px' }}>
             💬 Preguntas Técnicas y Soporte en Obra
           </h2>
-          
+
           <form onSubmit={manejarPregunta} style={{ display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap' }}>
-            <input 
-              type="text" 
-              placeholder="Pregunta sobre mantenimiento, arrastre, seguros..." 
-              value={nuevaPregunta} 
-              onChange={e => setNuevaPregunta(e.target.value)} 
-              style={{ flex: 1, minWidth: '260px', minHeight: '48px', padding: '10px 14px', borderRadius: '6px', border: `1px solid ${colors.inputBorder}`, backgroundColor: colors.inputBg, color: colors.textMain, fontSize: '14px', boxSizing: 'border-box' }} 
+            <input
+              type="text"
+              placeholder="Pregunta sobre mantenimiento, arrastre, seguros..."
+              value={nuevaPregunta}
+              onChange={e => setNuevaPregunta(e.target.value)}
+              style={{ flex: 1, minWidth: '260px', minHeight: '48px', padding: '10px 14px', borderRadius: '6px', border: `1px solid ${colors.inputBorder}`, backgroundColor: colors.inputBg, color: colors.textMain, fontSize: '14px', boxSizing: 'border-box' }}
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               style={{ minHeight: '48px', padding: '0 24px', backgroundColor: colors.cardLight, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}
             >
               Enviar Pregunta
@@ -568,13 +545,12 @@ export default function DetalleProducto() {
                   ❓ {p.texto}
                 </p>
                 <p style={{ margin: 0, color: colors.textSecondary, fontSize: '13px', lineHeight: '1.4' }}>
-                  💡 {p.respuesta}
+                  ↳ {p.respuesta}
                 </p>
               </div>
             ))}
           </div>
         </div>
-
       </div>
     </div>
   );
