@@ -258,7 +258,7 @@ export default function DetalleProducto() {
                       onClick={() => setMostrarVideo(false)}
                       style={{ minHeight: '44px', padding: '0 16px', backgroundColor: colors.inputBg, color: colors.textMain, border: `1px solid ${colors.inputBorder}`, borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}
                     >
-                      ← Volver a Fotografía
+                      ← \u2190 Volver a Fotografía
                     </button>
                   </div>
                 )
